@@ -29,6 +29,16 @@ class AgentOut(AgentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AgentRunRequest(BaseModel):
+    input: str
+
+
+class AgentRunResult(BaseModel):
+    success: bool
+    output: Optional[str]
+    error: Optional[str]
+
+
 # --- Workflows --------------------------------------------------------------
 
 

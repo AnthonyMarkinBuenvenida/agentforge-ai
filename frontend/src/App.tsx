@@ -1,34 +1,34 @@
-import { useEffect, useState } from 'react'
-
-type HealthResponse = {
-  status: string
-  demo_mode: boolean
-}
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import AgentDetailPage from './pages/AgentDetailPage'
+import AgentFormPage from './pages/AgentFormPage'
+import AgentsPage from './pages/AgentsPage'
+import DashboardPage from './pages/DashboardPage'
+import RunDetailPage from './pages/RunDetailPage'
+import RunsPage from './pages/RunsPage'
+import WorkflowDetailPage from './pages/WorkflowDetailPage'
+import WorkflowFormPage from './pages/WorkflowFormPage'
+import WorkflowsPage from './pages/WorkflowsPage'
 
 function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setError('Could not reach backend'))
-  }, [])
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-semibold">AgentForge AI</h1>
-        <p className="text-slate-400">Phase 1: project setup complete.</p>
-        {health && (
-          <p className="text-sm text-emerald-400">
-            Backend status: {health.status} (demo mode: {String(health.demo_mode)})
-          </p>
-        )}
-        {error && <p className="text-sm text-red-400">{error}</p>}
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="agents" element={<AgentsPage />} />
+          <Route path="agents/new" element={<AgentFormPage />} />
+          <Route path="agents/:id" element={<AgentDetailPage />} />
+          <Route path="agents/:id/edit" element={<AgentFormPage />} />
+          <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="workflows/new" element={<WorkflowFormPage />} />
+          <Route path="workflows/:id" element={<WorkflowDetailPage />} />
+          <Route path="workflows/:id/edit" element={<WorkflowFormPage />} />
+          <Route path="runs" element={<RunsPage />} />
+          <Route path="runs/:id" element={<RunDetailPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 

@@ -68,3 +68,24 @@ def test_get_missing_agent_returns_404(client):
 def test_create_agent_missing_required_field_returns_422(client):
     response = client.post("/api/agents", json={"name": "NoInstructions"})
     assert response.status_code == 422
+
+
+def test_run_agent_returns_demo_output(client):
+    created = client.post(
+        "/api/agents", json={"name": "Runnable", "system_instructions": "x"}
+    ).json()
+
+    response = client.post(
+        f"/api/agents/{created['id']}/run", json={"input": "Say hello"}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert "Runnable" in body["output"]
+    assert "Say hello" in body["output"]
+
+
+def test_run_missing_agent_returns_404(client):
+    response = client.post("/api/agents/999/run", json={"input": "hi"})
+    assert response.status_code == 404
