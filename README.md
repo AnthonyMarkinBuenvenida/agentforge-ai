@@ -39,11 +39,11 @@ FastAPI backend
    ├─ Routers (agents / workflows / runs / dashboard)  →  Pydantic request/response validation
    ├─ WorkflowRunner  →  runs each WorkflowStep in order, chains output → input
    ├─ AgentRunner     →  calls a provider, always returns a structured result (never raises)
-   ├─ AIProvider      →  DemoProvider (offline, deterministic) or AnthropicProvider (real API)
+   ├─ AIProvider      →  GeminiProvider / AnthropicProvider (real APIs) or DemoProvider (offline, deterministic)
    └─ SQLAlchemy models  →  SQLite locally / PostgreSQL (Neon) in production (agents, workflows, workflow_steps, workflow_runs, agent_executions)
 ```
 
-The frontend never talks to Anthropic directly — it only calls this backend's own `/api/*` endpoints, and the API key (when present) lives only in backend environment variables. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full breakdown and [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) for how the agent engine's pieces fit together.
+The frontend never talks to Gemini or Anthropic directly — it only calls this backend's own `/api/*` endpoints, and API keys (when present) live only in backend environment variables. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full breakdown and [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) for how the agent engine's pieces fit together.
 
 ## Main features
 
@@ -61,7 +61,7 @@ The frontend never talks to Anthropic directly — it only calls this backend's 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, react-router-dom
 - **Backend:** Python, FastAPI, SQLAlchemy
 - **Database:** SQLite locally (auto-created, zero setup) or PostgreSQL via [Neon](https://neon.com) in production — same SQLAlchemy models either way, switched purely by the `DATABASE_URL` environment variable
-- **AI:** Anthropic API, with a built-in demo mode that needs no API key
+- **AI:** Google Gemini (`gemini-3.5-flash-lite`) as the current production provider, Anthropic API as a fallback, and a built-in demo mode that needs no API key at all
 
 ## Project structure
 
@@ -88,7 +88,7 @@ AgentForge-AI/
 │   │   ├── knowledge_base.py
 │   │   ├── config.py        # env vars, demo-mode switch
 │   │   └── main.py          # FastAPI app, routes, startup seeding
-│   ├── tests/                # pytest suite (40 tests)
+│   ├── tests/                # pytest suite (45 tests)
 │   ├── requirements.txt
 │   └── .env.example
 └── frontend/
@@ -137,18 +137,21 @@ npm install
 Copy `backend/.env.example` to `backend/.env`:
 
 ```
+GEMINI_API_KEY=
 ANTHROPIC_API_KEY=
 DATABASE_URL=
 ```
 
-- **`ANTHROPIC_API_KEY`** — leave blank to run in **demo mode** (no network calls, deterministic canned responses); set a real key to call the real Anthropic API instead.
+- **`GEMINI_API_KEY`** — if set, the app uses the real Google Gemini API (`gemini-3.5-flash-lite`). Takes priority over `ANTHROPIC_API_KEY` if both are set.
+- **`ANTHROPIC_API_KEY`** — used only if `GEMINI_API_KEY` is not set; calls the real Anthropic API instead.
+- **Neither key set** → the app runs in **demo mode** (no network calls, deterministic canned responses).
 - **`DATABASE_URL`** — optional locally; defaults to a local SQLite file (`sqlite:///./agentforge.db`) if unset. In production on Vercel, the Neon Postgres integration injects this automatically as a `postgresql://` URL — you don't set it by hand there.
 
-`backend/.env` is gitignored and is never committed. The frontend never reads or sees either of these values — only the backend process does.
+`backend/.env` is gitignored and is never committed. The frontend never reads or sees any of these values — only the backend process does.
 
 ## Demo mode
 
-Demo mode is automatic whenever `ANTHROPIC_API_KEY` is unset or empty. `GET /api/health` reports it:
+Demo mode is the automatic fallback whenever neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` is set. `GET /api/health` reports it:
 
 ```json
 {"status": "ok", "demo_mode": true}
@@ -202,7 +205,9 @@ See [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) for a full walkthrough script.
 
 ## Deployment
 
-The entire app (frontend + backend) deploys together as one Vercel project using [Vercel Services](https://vercel.com/docs/services): `vercel.json` at the repo root declares a `frontend` service (`frontend/`) and a `backend` service (`backend/`, FastAPI entrypoint `app.main:app`), with `/api/*` routed to the backend and everything else to the frontend. In production, the database is Postgres via a Neon Marketplace integration — `DATABASE_URL` is injected automatically, and `ANTHROPIC_API_KEY` is set directly in the Vercel project's environment variables (never in git, never on the frontend).
+The entire app (frontend + backend) deploys together as one Vercel project using [Vercel Services](https://vercel.com/docs/services): `vercel.json` at the repo root declares a `frontend` service (`frontend/`) and a `backend` service (`backend/`, FastAPI entrypoint `app.main:app`), with `/api/*` routed to the backend and everything else to the frontend. In production, the database is Postgres via a Neon Marketplace integration — `DATABASE_URL` is injected automatically. Provider keys (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`) are set directly in the Vercel project's environment variables — never in git, never on the frontend.
+
+**Live production deployment:** [https://agentforge-ai-theta.vercel.app](https://agentforge-ai-theta.vercel.app) — currently running with `GEMINI_API_KEY` configured (real Gemini responses, not demo mode).
 
 ## GitHub repository
 
