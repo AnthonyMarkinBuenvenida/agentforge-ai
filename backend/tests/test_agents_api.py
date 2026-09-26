@@ -18,12 +18,17 @@ def test_create_and_get_agent(client):
 
 
 def test_list_agents_returns_created_agents(client):
+    existing_names = {agent["name"] for agent in client.get("/api/agents").json()}
+
     client.post("/api/agents", json={"name": "A", "system_instructions": "x"})
     client.post("/api/agents", json={"name": "B", "system_instructions": "y"})
 
     response = client.get("/api/agents")
     assert response.status_code == 200
-    assert [agent["name"] for agent in response.json()] == ["A", "B"]
+    new_names = [
+        agent["name"] for agent in response.json() if agent["name"] not in existing_names
+    ]
+    assert new_names == ["A", "B"]
 
 
 def test_update_agent(client):

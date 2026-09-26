@@ -73,6 +73,10 @@ class WorkflowOut(BaseModel):
 # --- Runs ---------------------------------------------------------------
 
 
+class WorkflowRunCreate(BaseModel):
+    input: str
+
+
 class AgentExecutionOut(BaseModel):
     id: int
     workflow_run_id: int

@@ -5,7 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.db_models import Agent, Workflow, WorkflowStep
-from app.schemas import WorkflowCreate, WorkflowOut, WorkflowStepIn, WorkflowUpdate
+from app.schemas import (
+    WorkflowCreate,
+    WorkflowOut,
+    WorkflowRunCreate,
+    WorkflowRunOut,
+    WorkflowStepIn,
+    WorkflowUpdate,
+)
+from app.workflow_engine import WorkflowRunner
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
@@ -72,3 +80,12 @@ def delete_workflow(workflow_id: int, db: Session = Depends(get_db)):
     db.delete(workflow)
     db.commit()
     return None
+
+
+@router.post("/{workflow_id}/run", response_model=WorkflowRunOut, status_code=201)
+def run_workflow(workflow_id: int, payload: WorkflowRunCreate, db: Session = Depends(get_db)):
+    workflow = db.get(Workflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    runner = WorkflowRunner(db)
+    return runner.run(workflow, payload.input)
