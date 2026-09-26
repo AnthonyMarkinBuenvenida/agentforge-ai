@@ -13,9 +13,14 @@ backend/.env
 backend/*.db
 backend/*.sqlite3
 
+# Dev server logs / pid files (from manual local runs)
+*.log
+*.pid
+
 # Node / frontend
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
 
 # Editor
 .vscode/
