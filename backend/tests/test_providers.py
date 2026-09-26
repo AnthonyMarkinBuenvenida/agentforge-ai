@@ -46,7 +46,7 @@ def test_gemini_provider_requires_api_key(monkeypatch):
 def test_gemini_provider_constructs_with_a_key():
     # Only constructs the client; does not make a real API call.
     provider = GeminiProvider(api_key="fake-key-for-construction-test")
-    assert provider.MODEL == "gemini-3.8-flash"
+    assert provider.MODEL == "gemini-3.5-flash-lite"
 
 
 class TestGetDefaultProvider:

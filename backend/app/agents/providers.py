@@ -52,7 +52,7 @@ class AnthropicProvider(AIProvider):
 class GeminiProvider(AIProvider):
     """Calls the real Gemini API using a key from the environment (or passed in)."""
 
-    MODEL = "gemini-3.8-flash"
+    MODEL = "gemini-3.5-flash-lite"
 
     def __init__(self, api_key: str | None = None) -> None:
         key = api_key or os.getenv("GEMINI_API_KEY")
