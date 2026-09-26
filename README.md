@@ -40,7 +40,7 @@ FastAPI backend
    ├─ WorkflowRunner  →  runs each WorkflowStep in order, chains output → input
    ├─ AgentRunner     →  calls a provider, always returns a structured result (never raises)
    ├─ AIProvider      →  DemoProvider (offline, deterministic) or AnthropicProvider (real API)
-   └─ SQLAlchemy models  →  SQLite (agents, workflows, workflow_steps, workflow_runs, agent_executions)
+   └─ SQLAlchemy models  →  SQLite locally / PostgreSQL (Neon) in production (agents, workflows, workflow_steps, workflow_runs, agent_executions)
 ```
 
 The frontend never talks to Anthropic directly — it only calls this backend's own `/api/*` endpoints, and the API key (when present) lives only in backend environment variables. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full breakdown and [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) for how the agent engine's pieces fit together.
@@ -60,7 +60,7 @@ The frontend never talks to Anthropic directly — it only calls this backend's 
 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, react-router-dom
 - **Backend:** Python, FastAPI, SQLAlchemy
-- **Database:** SQLite (auto-created, zero setup)
+- **Database:** SQLite locally (auto-created, zero setup) or PostgreSQL via [Neon](https://neon.com) in production — same SQLAlchemy models either way, switched purely by the `DATABASE_URL` environment variable
 - **AI:** Anthropic API, with a built-in demo mode that needs no API key
 
 ## Project structure
@@ -69,6 +69,7 @@ The frontend never talks to Anthropic directly — it only calls this backend's 
 AgentForge-AI/
 ├── CLAUDE.md
 ├── README.md
+├── vercel.json           # Vercel Services config (frontend + backend, deployed together)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── AGENT_DESIGN.md
@@ -87,7 +88,7 @@ AgentForge-AI/
 │   │   ├── knowledge_base.py
 │   │   ├── config.py        # env vars, demo-mode switch
 │   │   └── main.py          # FastAPI app, routes, startup seeding
-│   ├── tests/                # pytest suite (37 tests)
+│   ├── tests/                # pytest suite (40 tests)
 │   ├── requirements.txt
 │   └── .env.example
 └── frontend/
@@ -137,12 +138,13 @@ Copy `backend/.env.example` to `backend/.env`:
 
 ```
 ANTHROPIC_API_KEY=
+DATABASE_URL=
 ```
 
-- **Leave it blank** → the app runs in **demo mode** (no network calls, deterministic canned responses). This is the default and needs zero setup.
-- **Set a real key** → the app calls the real Anthropic API instead.
+- **`ANTHROPIC_API_KEY`** — leave blank to run in **demo mode** (no network calls, deterministic canned responses); set a real key to call the real Anthropic API instead.
+- **`DATABASE_URL`** — optional locally; defaults to a local SQLite file (`sqlite:///./agentforge.db`) if unset. In production on Vercel, the Neon Postgres integration injects this automatically as a `postgresql://` URL — you don't set it by hand there.
 
-`backend/.env` is gitignored and is never committed. The frontend never reads or sees this value — only the backend process does.
+`backend/.env` is gitignored and is never committed. The frontend never reads or sees either of these values — only the backend process does.
 
 ## Demo mode
 
@@ -162,7 +164,7 @@ cd backend
 uvicorn app.main:app --reload
 ```
 
-Runs on `http://127.0.0.1:8000`. On first startup it creates the SQLite database and seeds the Academic Research Factory automatically.
+Runs on `http://127.0.0.1:8000`. On first startup it creates the database tables (SQLite locally, or Postgres if `DATABASE_URL` is set) and seeds the Academic Research Factory automatically.
 
 ## How to start the frontend
 
@@ -198,9 +200,13 @@ npm test        # vitest unit tests
 
 See [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) for a full walkthrough script.
 
+## Deployment
+
+The entire app (frontend + backend) deploys together as one Vercel project using [Vercel Services](https://vercel.com/docs/services): `vercel.json` at the repo root declares a `frontend` service (`frontend/`) and a `backend` service (`backend/`, FastAPI entrypoint `app.main:app`), with `/api/*` routed to the backend and everything else to the frontend. In production, the database is Postgres via a Neon Marketplace integration — `DATABASE_URL` is injected automatically, and `ANTHROPIC_API_KEY` is set directly in the Vercel project's environment variables (never in git, never on the frontend).
+
 ## GitHub repository
 
-This repository does not yet have a GitHub remote configured — it currently exists only as a local git repository. See [docs/FINAL_CHECKLIST.md](docs/FINAL_CHECKLIST.md) for its current push-readiness status.
+This project's source is hosted on GitHub, with deployment-ready configuration (`vercel.json`) committed alongside the application code.
 
 ## Known limitations
 
@@ -208,4 +214,4 @@ This repository does not yet have a GitHub remote configured — it currently ex
 - **Synchronous workflow execution** — a workflow run happens within a single HTTP request; there's no background job queue or live streaming of in-progress steps, so the UI shows a loading state, then the complete result all at once.
 - **Demo-mode output is intentionally repetitive** — `DemoProvider` echoes the previous step's full input back verbatim, so by the Writer step the demo text is visibly nested. This is expected: it makes the data flow between agents easy to see without needing a real API key.
 - **Local knowledge base only** — the Researcher agent searches a small, hardcoded set of topics (deterministic keyword matching), not a real search engine or vector database, by design.
-- **SQLite only** — fine for a single-user local demo; not built for concurrent multi-user production use.
+- **SQLite locally, Postgres in production** — local development defaults to a zero-setup SQLite file; a deployed instance needs a Neon Postgres database (free tier) since Vercel's serverless functions have no persistent local filesystem.

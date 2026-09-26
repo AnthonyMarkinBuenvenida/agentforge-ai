@@ -38,7 +38,7 @@ Plain React function components, routed with `react-router-dom`. There's exactly
 
 **Routers** (`app/routers/`) are the only HTTP surface. Each one is a thin CRUD layer over a SQLAlchemy model, using Pydantic schemas (`app/schemas.py`) to validate input and shape output. They contain no business logic beyond input validation (e.g. checking a referenced agent exists) and 404/400 handling.
 
-**Database** (`app/db.py`, `app/db_models.py`): five tables — `Agent`, `Workflow`, `WorkflowStep`, `WorkflowRun`, `AgentExecution`. A `Workflow` has an ordered list of `WorkflowStep`s (each pointing at an `Agent`); a `WorkflowRun` has an ordered list of `AgentExecution`s (one per step, in the order it ran). `init_db()` creates the tables on startup if they don't exist — no manual migration step for a project this size.
+**Database** (`app/db.py`, `app/db_models.py`): five tables — `Agent`, `Workflow`, `WorkflowStep`, `WorkflowRun`, `AgentExecution`. A `Workflow` has an ordered list of `WorkflowStep`s (each pointing at an `Agent`); a `WorkflowRun` has an ordered list of `AgentExecution`s (one per step, in the order it ran). `init_db()` creates the tables on startup if they don't exist — no manual migration step for a project this size. The engine is created from `DATABASE_URL`: a local SQLite file by default (zero setup, used in dev and in the test suite), or a Postgres URL (Neon, injected automatically in production) — the SQLAlchemy models and every query are identical either way; only the connection string changes.
 
 **Agent engine** (`app/agents/`) is independent of the database and the web layer — it just takes a plain `AgentConfig` and some input text and returns a result. See [AGENT_DESIGN.md](AGENT_DESIGN.md) for the full breakdown of `AgentConfig`, `AgentRunner`, `AIProvider`, and the two providers.
 
@@ -61,4 +61,4 @@ Plain React function components, routed with `react-router-dom`. There's exactly
 - No authentication — this is a local, single-user demo app.
 - No background job queue — a workflow run is one synchronous request; acceptable at demo scale, and it means there's no extra moving part (no Redis, no Celery, no polling) to explain.
 - No vector database — the "AI Factory" tool use is a small, deterministic local keyword search, exactly matching the assignment's constraint against external search/vector infrastructure.
-- SQLite, not a client-server database — this is a solo project meant to run entirely on one machine.
+- SQLite for local development — zero setup, no server to run. In production, Vercel's serverless functions have no persistent local disk, so deployment uses a small managed Postgres database (Neon) instead; the application code doesn't know or care which one it's talking to.

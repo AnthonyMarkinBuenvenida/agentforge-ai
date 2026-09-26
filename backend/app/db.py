@@ -3,8 +3,13 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import DATABASE_URL
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+
+def connect_args_for(database_url: str) -> dict:
+    """SQLite needs same-thread checking disabled for FastAPI's threaded request handling; other databases (e.g. Postgres) need no special connect args."""
+    return {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args_for(DATABASE_URL))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
