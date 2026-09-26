@@ -25,3 +25,6 @@ frontend/coverage/
 # Editor
 .vscode/
 .DS_Store
+
+.vercel
+.env*

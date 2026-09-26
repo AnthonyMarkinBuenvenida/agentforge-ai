@@ -2,6 +2,8 @@ import os
 from abc import ABC, abstractmethod
 
 from anthropic import Anthropic
+from google import genai
+from google.genai import types as genai_types
 
 from app.agents.models import AgentConfig, AgentContext
 
@@ -47,8 +49,35 @@ class AnthropicProvider(AIProvider):
         return response.content[0].text
 
 
-def get_default_provider() -> AIProvider:
-    """Picks DemoProvider or AnthropicProvider based on whether an API key is set."""
-    from app.config import DEMO_MODE
+class GeminiProvider(AIProvider):
+    """Calls the real Gemini API using a key from the environment (or passed in)."""
 
-    return DemoProvider() if DEMO_MODE else AnthropicProvider()
+    MODEL = "gemini-3.8-flash"
+
+    def __init__(self, api_key: str | None = None) -> None:
+        key = api_key or os.getenv("GEMINI_API_KEY")
+        if not key:
+            raise ValueError(
+                "GEMINI_API_KEY is not set; cannot create GeminiProvider."
+            )
+        self._client = genai.Client(api_key=key)
+
+    def generate(self, config: AgentConfig, context: AgentContext) -> str:
+        response = self._client.models.generate_content(
+            model=self.MODEL,
+            contents=context.user_input,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=config.system_instructions,
+                max_output_tokens=config.max_tokens,
+            ),
+        )
+        return response.text
+
+
+def get_default_provider() -> AIProvider:
+    """Picks a provider by priority: Gemini, then Anthropic, then the offline demo."""
+    if os.getenv("GEMINI_API_KEY"):
+        return GeminiProvider()
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return AnthropicProvider()
+    return DemoProvider()
