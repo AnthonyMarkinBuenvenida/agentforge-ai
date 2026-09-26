@@ -1,13 +1,20 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { listAgents } from '../api/client'
+import { getHealth, listAgents } from '../api/client'
 import AgentsPage from './AgentsPage'
 
 vi.mock('../api/client')
 
 beforeEach(() => {
   vi.mocked(listAgents).mockReset()
+  vi.mocked(getHealth).mockReset()
+  vi.mocked(getHealth).mockResolvedValue({
+    status: 'ok',
+    demo_mode: true,
+    provider: 'demo',
+    model: null,
+  })
 })
 
 function renderPage() {

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { deleteAgent, getAgent, runAgent } from '../api/client'
+import { deleteAgent, getAgent, getHealth, runAgent } from '../api/client'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import type { Agent, AgentRunResult } from '../types'
+import { agentEffectiveModelLabel } from '../modelLabels'
+import type { Agent, AgentRunResult, Health } from '../types'
 
 export default function AgentDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
   const [agent, setAgent] = useState<Agent | null>(null)
+  const [health, setHealth] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,8 +21,11 @@ export default function AgentDetailPage() {
   const [runError, setRunError] = useState<string | null>(null)
 
   useEffect(() => {
-    getAgent(Number(id))
-      .then(setAgent)
+    Promise.all([getAgent(Number(id)), getHealth()])
+      .then(([agentData, healthData]) => {
+        setAgent(agentData)
+        setHealth(healthData)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [id])
@@ -65,7 +70,7 @@ export default function AgentDetailPage() {
 
       <Card className="space-y-2">
         <p className="text-sm text-slate-500">{agent.description || 'No description.'}</p>
-        <p className="text-xs text-slate-400">Model: {agent.model}</p>
+        <p className="text-xs text-slate-400">Model: {agentEffectiveModelLabel(agent.model, health)}</p>
         <div>
           <p className="text-sm font-medium mb-1">System Instructions</p>
           <p className="text-sm whitespace-pre-wrap">{agent.system_instructions}</p>

@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAgents } from '../api/client'
+import { getHealth, listAgents } from '../api/client'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import type { Agent } from '../types'
+import { agentEffectiveModelLabel } from '../modelLabels'
+import type { Agent, Health } from '../types'
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([])
+  const [health, setHealth] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    listAgents()
-      .then(setAgents)
+    Promise.all([listAgents(), getHealth()])
+      .then(([agentsData, healthData]) => {
+        setAgents(agentsData)
+        setHealth(healthData)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
@@ -46,7 +51,9 @@ export default function AgentsPage() {
                     </Link>
                     <p className="text-sm text-slate-500">{agent.description}</p>
                   </div>
-                  <span className="text-xs text-slate-400 shrink-0">{agent.model}</span>
+                  <span className="text-xs text-slate-400 shrink-0">
+                    {agentEffectiveModelLabel(agent.model, health)}
+                  </span>
                 </li>
               ))}
             </ul>

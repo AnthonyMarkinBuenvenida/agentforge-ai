@@ -3,15 +3,10 @@ import { Link } from 'react-router-dom'
 import { getDashboardStats, getHealth, listRuns, listWorkflows } from '../api/client'
 import Card from '../components/Card'
 import StatusBadge from '../components/StatusBadge'
+import { activeProviderLabel } from '../modelLabels'
 import type { DashboardStats, Health, Workflow, WorkflowRun } from '../types'
 
 const FACTORY_NAME = 'Academic Research Factory'
-
-const PROVIDER_LABELS: Record<Health['provider'], string> = {
-  gemini: 'Gemini 3.5 Flash-Lite',
-  anthropic: 'Claude Sonnet 5',
-  demo: 'Demo Mode (no API key configured)',
-}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -45,7 +40,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         {health && (
           <p className="text-sm text-slate-500 mt-1">
-            AI Provider: <span className="font-medium text-slate-700">{PROVIDER_LABELS[health.provider]}</span>
+            AI Provider: <span className="font-medium text-slate-700">{activeProviderLabel(health)}</span>
           </p>
         )}
       </div>
