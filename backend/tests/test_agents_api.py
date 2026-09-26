@@ -89,3 +89,34 @@ def test_run_agent_returns_demo_output(client):
 def test_run_missing_agent_returns_404(client):
     response = client.post("/api/agents/999/run", json={"input": "hi"})
     assert response.status_code == 404
+
+
+def test_run_agent_with_empty_input_still_succeeds(client):
+    created = client.post(
+        "/api/agents", json={"name": "EmptyRunner", "system_instructions": "x"}
+    ).json()
+
+    response = client.post(f"/api/agents/{created['id']}/run", json={"input": ""})
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+
+def test_run_agent_provider_error_returns_structured_failure(client, monkeypatch):
+    from app.agents.models import AgentConfig, AgentContext
+    from app.agents.providers import AIProvider
+
+    class BrokenProvider(AIProvider):
+        def generate(self, config: AgentConfig, context: AgentContext) -> str:
+            raise RuntimeError("simulated API outage")
+
+    monkeypatch.setattr("app.routers.agents.get_default_provider", lambda: BrokenProvider())
+
+    created = client.post(
+        "/api/agents", json={"name": "Flaky", "system_instructions": "x"}
+    ).json()
+
+    response = client.post(f"/api/agents/{created['id']}/run", json={"input": "hi"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is False
+    assert "simulated API outage" in body["error"]

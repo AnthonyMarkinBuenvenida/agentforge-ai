@@ -1,7 +1,18 @@
+from app.agents.models import AgentConfig, AgentContext
+from app.agents.providers import AIProvider
+
+
 def _create_agent(client, name="Planner"):
     return client.post(
         "/api/agents", json={"name": name, "system_instructions": "x"}
     ).json()
+
+
+class BrokenProvider(AIProvider):
+    """Test double simulating a real provider/API outage (e.g. bad key, network error)."""
+
+    def generate(self, config: AgentConfig, context: AgentContext) -> str:
+        raise RuntimeError("simulated API outage")
 
 
 def test_create_workflow_with_steps(client):
@@ -59,3 +70,38 @@ def test_delete_workflow(client):
 
 def test_get_missing_workflow_returns_404(client):
     assert client.get("/api/workflows/999").status_code == 404
+
+
+def test_run_missing_workflow_returns_404(client):
+    response = client.post("/api/workflows/999/run", json={"input": "hi"})
+    assert response.status_code == 404
+
+
+def test_run_workflow_with_empty_input_still_succeeds(client):
+    agent = _create_agent(client)
+    workflow = client.post(
+        "/api/workflows",
+        json={"name": "Empty Input WF", "steps": [{"agent_id": agent["id"], "step_order": 1}]},
+    ).json()
+
+    response = client.post(f"/api/workflows/{workflow['id']}/run", json={"input": ""})
+    assert response.status_code == 201
+    assert response.json()["status"] == "completed"
+
+
+def test_run_workflow_provider_error_returns_failed_run(client, monkeypatch):
+    monkeypatch.setattr("app.workflow_engine.get_default_provider", lambda: BrokenProvider())
+
+    agent = _create_agent(client)
+    workflow = client.post(
+        "/api/workflows",
+        json={"name": "Flaky Workflow", "steps": [{"agent_id": agent["id"], "step_order": 1}]},
+    ).json()
+
+    response = client.post(f"/api/workflows/{workflow['id']}/run", json={"input": "hi"})
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "failed"
+    assert "simulated API outage" in body["error"]
+    assert len(body["executions"]) == 1
+    assert body["executions"][0]["status"] == "failed"
