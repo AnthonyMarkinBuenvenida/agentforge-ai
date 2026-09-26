@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.providers import get_default_provider_info
 from app.config import DEMO_MODE
 from app.db import SessionLocal, init_db
 from app.factories.academic_research import ensure_academic_research_factory
@@ -37,4 +38,4 @@ app.include_router(dashboard.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "demo_mode": DEMO_MODE}
+    return {"status": "ok", "demo_mode": DEMO_MODE, **get_default_provider_info()}

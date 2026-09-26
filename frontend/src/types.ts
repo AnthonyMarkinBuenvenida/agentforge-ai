@@ -79,3 +79,10 @@ export interface AgentRunResult {
   output: string | null
   error: string | null
 }
+
+export interface Health {
+  status: string
+  demo_mode: boolean
+  provider: 'gemini' | 'anthropic' | 'demo'
+  model: string | null
+}

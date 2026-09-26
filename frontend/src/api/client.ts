@@ -3,6 +3,7 @@ import type {
   AgentInput,
   AgentRunResult,
   DashboardStats,
+  Health,
   Workflow,
   WorkflowInput,
   WorkflowRun,
@@ -70,3 +71,7 @@ export const getRun = (id: number) => request<WorkflowRun>(`/runs/${id}`)
 // --- Dashboard --------------------------------------------------------------
 
 export const getDashboardStats = () => request<DashboardStats>('/dashboard/stats')
+
+// --- Health -----------------------------------------------------------------
+
+export const getHealth = () => request<Health>('/health')

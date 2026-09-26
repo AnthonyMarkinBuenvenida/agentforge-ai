@@ -81,3 +81,13 @@ def get_default_provider() -> AIProvider:
     if os.getenv("ANTHROPIC_API_KEY"):
         return AnthropicProvider()
     return DemoProvider()
+
+
+def get_default_provider_info() -> dict:
+    """Reports which provider/model get_default_provider() would pick, for display purposes
+    only (e.g. a status indicator) - does not construct a provider or use any API key."""
+    if os.getenv("GEMINI_API_KEY"):
+        return {"provider": "gemini", "model": GeminiProvider.MODEL}
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return {"provider": "anthropic", "model": "claude-sonnet-5"}
+    return {"provider": "demo", "model": None}

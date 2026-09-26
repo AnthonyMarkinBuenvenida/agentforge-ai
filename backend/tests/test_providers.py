@@ -6,6 +6,7 @@ from app.agents.providers import (
     DemoProvider,
     GeminiProvider,
     get_default_provider,
+    get_default_provider_info,
 )
 
 
@@ -67,3 +68,29 @@ class TestGetDefaultProvider:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
         assert isinstance(get_default_provider(), DemoProvider)
+
+
+class TestGetDefaultProviderInfo:
+    def test_reports_gemini_and_its_model(self, monkeypatch):
+        monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-anthropic-key")
+
+        assert get_default_provider_info() == {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash-lite",
+        }
+
+    def test_reports_anthropic_when_only_anthropic_key_is_set(self, monkeypatch):
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-anthropic-key")
+
+        assert get_default_provider_info() == {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5",
+        }
+
+    def test_reports_demo_when_no_keys_are_set(self, monkeypatch):
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        assert get_default_provider_info() == {"provider": "demo", "model": None}

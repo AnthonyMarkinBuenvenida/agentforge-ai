@@ -1,25 +1,33 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getDashboardStats, listRuns, listWorkflows } from '../api/client'
+import { getDashboardStats, getHealth, listRuns, listWorkflows } from '../api/client'
 import Card from '../components/Card'
 import StatusBadge from '../components/StatusBadge'
-import type { DashboardStats, Workflow, WorkflowRun } from '../types'
+import type { DashboardStats, Health, Workflow, WorkflowRun } from '../types'
 
 const FACTORY_NAME = 'Academic Research Factory'
+
+const PROVIDER_LABELS: Record<Health['provider'], string> = {
+  gemini: 'Gemini 3.5 Flash-Lite',
+  anthropic: 'Claude Sonnet 5',
+  demo: 'Demo Mode (no API key configured)',
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [runs, setRuns] = useState<WorkflowRun[]>([])
   const [workflows, setWorkflows] = useState<Workflow[]>([])
+  const [health, setHealth] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([getDashboardStats(), listRuns(), listWorkflows()])
-      .then(([statsData, runsData, workflowsData]) => {
+    Promise.all([getDashboardStats(), listRuns(), listWorkflows(), getHealth()])
+      .then(([statsData, runsData, workflowsData, healthData]) => {
         setStats(statsData)
         setRuns(runsData.slice(0, 5))
         setWorkflows(workflowsData)
+        setHealth(healthData)
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
@@ -33,7 +41,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        {health && (
+          <p className="text-sm text-slate-500 mt-1">
+            AI Provider: <span className="font-medium text-slate-700">{PROVIDER_LABELS[health.provider]}</span>
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
